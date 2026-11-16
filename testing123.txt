@@ -1,1 +1,28 @@
 hello world
+
+overviewed code
+
+236 - changed to 1
+288 - changed to 756, num parallel cells not used
+
+checked with simay for slx model, consider fitting variables into her code?
+
+error w/ numSeriesPanel
+dont remember solution
+
+error w/ numParallelPanel not defined
+202 - pv plant power, changed to 3*, reverted
+236 - changed to 1
+244 - why is pv plant power low? why does it matter that plant power (which is necessary power to function) is greater than or equal min string power? why is parallel panel only defined in the IF loop?
+***ran again, worked for whatever reason
+
+no error, but noticed that max input and output current of boost converter is e+05
+272 - MaxpowerOutputCurrent and PVCurrent is super high, maybe something wrong with panel power?
+288 - reverted again, it was ok, im a dumbass :)
+
+stc is at 25, why is that max operating temp?
+13 & 14 - the max power is only calced for stc
+233 - no temp related coeffs used, how is this right?
+
+tried to open slx file, same error w/num parallelpanel
+272 and 273 - changed out var with 1

@@ -7,7 +7,7 @@ pvBlk  = 'PV_MPPT_6module'; % name of the converter subsystem inside that model
 inTags = {'Vo', 'Vpv', 'Ipv'};
 
 run('LunarMicrogridA_Data');
-% run(''); if full bridge parameters are in their own file uncomment and put name of file in ''
+run('P170_PV_Initialize'); %if full bridge parameters are in their own file uncomment and put name of file in ''
 
 if bdIsLoaded(mdl), close_system(mdl, 0); end
 copyfile([mdl '.slx'], [mdl '_backup.slx']); % can rename or can leave as sep file for reference compared to LunarMicrogrid_Combined

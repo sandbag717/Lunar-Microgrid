@@ -1,0 +1,68 @@
+mdl    = 'LunarMicrogrid_Combined_PVOnly';
+pvMdl  = 'P170_PV_MPPT_Integration'; % simay converter model name w/o .slx
+pvBlk  = 'PV_MPPT_6module'; % name of the converter subsystem inside that model
+
+% signals the converter needs as inputs, in the same order as its inports
+% available tags: Vo (bus V), Vpv (PV V), Ipv (PV I), Irrad, PVoff, pvMPPT, VoltCont from existing model
+inTags = {};
+
+run('');
+run(''); %if full bridge parameters are in their own file uncomment and put name of file in ''
+
+if bdIsLoaded(mdl), close_system(mdl, 0); end
+copyfile([mdl '.slx'], [mdl '_backup.slx']); % can rename or can leave as sep file for reference compared to LunarMicrogrid_Combined
+load_system(mdl);
+load_system(pvMdl);
+
+% removes old PV Control, the from blocks feeding it, and the Gpv duty signal since droop control is inside the new converter
+pvc = [mdl '/PV Control'];
+pc = get_param(pvc, 'PortConnectivity');
+srcs = [pc.SrcBlock];
+srcs = srcs(srcs > 0);
+for h = srcs
+    if strcmp(get_param(h, 'BlockType'), 'From')
+        delOne(h);
+    end
+end
+delOne(pvc);
+delOne([mdl '/Gpv']);
+delOne([mdl '/Gpv1']);
+
+% swaps boost for the new converter, bus wires are left alone so BMS and load stay connected
+pos = get_param([mdl '/Boost Converter'], 'Position');
+delete_block([mdl '/Boost Converter']);
+add_block([pvMdl '/' pvBlk], [mdl '/PV Converter'], 'Position', pos);
+
+add_line(mdl, 'Capacitor/LConn1', 'PV Converter/LConn1', 'autorouting', 'on'); % PV+
+add_line(mdl, 'Capacitor/RConn1', 'PV Converter/LConn2', 'autorouting', 'on'); % PV-
+add_line(mdl, 'Load/LConn1',      'PV Converter/RConn1', 'autorouting', 'on'); % bus+
+add_line(mdl, 'Load/RConn1',      'PV Converter/RConn2', 'autorouting', 'on'); % bus-
+
+% connects each inport to its signal from inTags
+for i = 1:numel(inTags)
+    fb = [mdl '/PVin_' inTags{i}];
+    add_block('simulink/Signal Routing/From', fb, 'GotoTag', inTags{i}, ...
+        'Position', [pos(1)-120, pos(2)+30*(i-1), pos(1)-70, pos(2)+30*(i-1)+20]);
+    add_line(mdl, ['PVin_' inTags{i} '/1'], ['PV Converter/' num2str(i)], 'autorouting', 'on');
+end
+
+close_system(pvMdl, 0);
+set_param(mdl, 'SimulationCommand', 'update');
+save_system(mdl);
+disp('PV converter swapped and model saved. Backup saved as LunarMicrogrid_Combined_backup.slx'); % again can change name but check if this doesnt come up then error occured
+
+% helper func, deletes a block and its signal wires, skips if it doesnt exist
+function delOne(b)
+if ischar(b) && getSimulinkBlockHandle(b) == -1
+    return
+end
+lh = get_param(b, 'LineHandles');
+hs = [lh.Inport lh.Outport];
+for h = hs(hs > 0)
+    try
+        delete_line(h);
+    catch
+    end
+end
+delete_block(b);
+end
